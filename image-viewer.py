@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+
 import os, eel
 from datetime import date, timedelta
 from random import randint, choice
 from requests_html import HTMLSession
 
-eel.init('web')
+web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
+eel.init(web_dir)
 session = HTMLSession()
 
 
@@ -23,7 +26,7 @@ def get_random_image_url():
 def save_image(url):
     try:
         img = session.get(url).content
-        open(os.path.join('web', 'image'), 'wb').write(img)
+        open(os.path.join(web_dir, 'image'), 'wb').write(img)
     except Exception as e:
         print(e)
 
