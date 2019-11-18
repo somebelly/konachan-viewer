@@ -10,13 +10,13 @@
 	<link rel="stylesheet" href="style.css">
 	<script type="text/javascript" src="/eel.js"></script>
 	<script type="text/javascript">
-		eel.load()
+		eel.load()(n => document.getElementById("image").src = n)
 	</script>
 </head>
 
 <body>
 	<div class=frame>
-		<img src="image">
+		<img id="image">
 	</div>
 </body>
 

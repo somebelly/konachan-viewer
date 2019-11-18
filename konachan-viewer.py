@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os, eel
+from base64 import b64encode
 from datetime import date, timedelta
 from random import randint, choice
 from requests_html import HTMLSession
@@ -8,6 +9,7 @@ from requests_html import HTMLSession
 web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
 eel.init(web_dir)
 session = HTMLSession()
+image = None
 
 
 def random_date(start=date(2008, 1, 13), end=date.today()):
@@ -23,20 +25,28 @@ def get_random_image_url():
         ).html.find(".directlink.largeimg")).links.pop()
 
 
-def save_image(url):
+def get_image(url):
     try:
-        img = session.get(url).content
-        open(os.path.join(web_dir, 'image'), 'wb').write(img)
-    except Exception as e:
-        print(e)
+        return b64encode(session.get(url).content)
+    except:
+        return b''
+
+
+def update():
+    global image
+    while True:
+        img = get_image(get_random_image_url())
+        if img:
+            break
+    image = "data:image;base64," + str(img)[2:-1]
 
 
 @eel.expose
-def load(seconds=3):
-    eel.sleep(seconds / 2)
-    save_image(get_random_image_url())
-    eel.sleep(seconds / 2)
+def load():
+    img = image
+    eel.spawn(update)
+    return img
 
 
-load()
+update()
 eel.start('index.html')
