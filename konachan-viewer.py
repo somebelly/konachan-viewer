@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, eel
+import os, sys, eel
 from base64 import b64encode
 from datetime import date, timedelta
 from random import randint, choice
@@ -19,13 +19,17 @@ def random_date(start=date(2008, 1, 13), end=date.today()):
 
 def get_random_image_url():
     d = random_date()
-    return choice(
-        session.get(
-            f"https://konachan.com/post/popular_by_day?day={d.day}&month={d.month}&year={d.year}"
-        ).html.find(".directlink.largeimg")).links.pop()
+    url = f"https://konachan.com/post/popular_by_day?day={d.day}&month={d.month}&year={d.year}"
+    try:
+        html = choice(session.get(url).html.find(".directlink.largeimg"))
+        return html.links.pop()
+    except:
+        return ''
 
 
 def get_image(url):
+    if not url:
+        return b''
     try:
         return b64encode(session.get(url).content)
     except:
@@ -46,6 +50,11 @@ def load():
     img = image
     eel.spawn(update)
     return img
+
+
+@eel.expose
+def close():
+    sys.exit()
 
 
 update()
