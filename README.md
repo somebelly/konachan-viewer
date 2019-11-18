@@ -27,4 +27,4 @@ knv
 
 ## Tips
  - Press `F11` to enter full-screen mode
- - Edit `<meta http-equiv="refresh" content="5" />` in `web/index.html` to change the refresh rate
+ - Edit `window.setInterval(reload, 5000)` in `web/main.js` to change the refresh rate
