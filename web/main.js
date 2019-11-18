@@ -1,9 +1,14 @@
 /* global eel */
+
 reload()
 
 window.onbeforeunload = function () { eel.close() }
 
-function loading (img) { document.getElementById('image').src = img }
+// res = [img, url]
+function loading (res) {
+  document.getElementById('image').src = res[0]
+  console.log(res[1])
+}
 
 function reload () { eel.load()(loading) }
 
