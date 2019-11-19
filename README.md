@@ -1,5 +1,5 @@
 # konachan-viewer
-Show a popular image from konachan randomly (using eel)
+Show a popular image from konachan or yande randomly (using eel)
 
 ## Dependences
 
@@ -27,4 +27,4 @@ knv
 
 ## Tips
  - Press `F11` to enter full-screen mode
- - Edit `window.setInterval(reload, 5000)` in `web/main.js` to change the refresh rate
+ - Press `F12` to view history logs

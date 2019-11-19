@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 
-import os, sys, eel
-from base64 import b64encode
+import os, sys, shutil, eel
+from hashlib import md5
 from datetime import date, timedelta
 from random import randint, choice
 from requests_html import HTMLSession
 
 web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
-eel.init(web_dir)
+img_dir = os.path.join(web_dir, 'images')
+current_img = None
+current_url = None
 session = HTMLSession()
-image = None
-image_url = None
 beginning = {
     "konachan.com": date(2008, 1, 13),
     "yande.re": date(2007, 8, 8),
 }
+
+
+def init():
+    if not os.path.exists(img_dir):
+        os.mkdir(img_dir)
+    update()
+    eel.init(web_dir)
 
 
 def random_date(start=date.today() - timedelta(days=1000), end=date.today()):
@@ -37,35 +44,42 @@ def get_random_image_url(site=None):
 
 def get_image(url):
     try:
-        return b64encode(session.get(url).content)
+        img = session.get(url).content
+        image_name = md5(url.encode()).hexdigest() + os.path.splitext(url)[1]
+        open(os.path.join(img_dir, image_name), 'wb').write(img)
+        return image_name
     except:
-        return b''
+        return ''
 
 
 def update():
-    global image, image_url
+    global current_img, current_url
     while True:
         url = get_random_image_url()
         if url:
-            image_url = url
-            img = get_image(url)
-            if img:
-                break
-    image = "data:image;base64," + str(img)[2:-1]
+            current_url = url
+            image_name = get_image(url)
+            if image_name:
+                current_img = image_name
+                return
 
 
-@eel.expose
 def load():
-    img = image
-    url = image_url
+    is_alive = eel.loading([current_img, current_url])()
+    if not is_alive:
+        shutil.rmtree(img_dir)
+        sys.exit()
+    print(is_alive)
     eel.spawn(update)
-    return [img, url]
 
 
-@eel.expose
-def close():
-    sys.exit()
+def close(page, sockets):
+    pass
 
 
-update()
-eel.start('index.html', all_interfaces=True)
+init()
+eel.start('index.html', all_interfaces=True, block=False, close_callback=close)
+
+while True:
+    load()
+    eel.sleep(5)
