@@ -2,7 +2,7 @@
 
 import os, sys, shutil, eel
 from hashlib import md5
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from random import randint, choice
 from requests_html import HTMLSession
 
@@ -10,6 +10,7 @@ web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
 img_dir = os.path.join(web_dir, 'images')
 current_img = None
 current_url = None
+last_call = None
 session = HTMLSession()
 beginning = {
     "konachan.com": date(2008, 1, 13),
@@ -17,11 +18,10 @@ beginning = {
 }
 
 
-def init():
-    if not os.path.exists(img_dir):
-        os.mkdir(img_dir)
-    update()
-    eel.init(web_dir)
+def check_alive(seconds, r=0.5):
+    while (datetime.now() - last_call).seconds < seconds:
+        eel.sleep(seconds * (r + 1e-2))
+    true_close()
 
 
 def random_date(start=date.today() - timedelta(days=1000), end=date.today()):
@@ -65,21 +65,51 @@ def update():
 
 
 def load():
-    is_alive = eel.loading([current_img, current_url])()
-    if not is_alive:
-        shutil.rmtree(img_dir)
-        sys.exit()
-    print(is_alive)
+    global last_call
+    loaded = eel.loading([current_img, current_url])()
+    if loaded:
+        last_call = datetime.now()
+    print(loaded)
     eel.spawn(update)
 
 
-def close(page, sockets):
+def keep_loading(seconds):
+    while True:
+        load()
+        eel.sleep(seconds)
+
+
+def fake_close(page, sockets):
     pass
 
 
-init()
-eel.start('index.html', all_interfaces=True, block=False, close_callback=close)
+def true_close():
+    shutil.rmtree(img_dir)
+    print('I\'m dead.')
+    sys.exit()
 
-while True:
-    load()
-    eel.sleep(5)
+
+def wait():
+    eel.sleep(1e233)
+
+
+def init(seconds):
+    global last_call
+    if not os.path.exists(img_dir):
+        os.mkdir(img_dir)
+    update()
+    eel.init(web_dir)
+    eel.start(
+        'index.html',
+        port=0,
+        all_interfaces=True,
+        block=False,
+        close_callback=fake_close,
+    )
+    eel.spawn(keep_loading, seconds)
+    last_call = datetime.now()
+    eel.spawn(check_alive, seconds)
+    wait()
+
+
+init(5)
