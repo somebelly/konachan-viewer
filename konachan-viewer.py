@@ -68,4 +68,4 @@ def close():
 
 
 update()
-eel.start('index.html')
+eel.start('index.html', all_interfaces=True)
