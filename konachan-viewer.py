@@ -107,7 +107,8 @@ def init(seconds):
         close_callback=fake_close,
     )
     eel.spawn(keep_loading, seconds)
-    last_call = datetime.now()
+    while not last_call:
+        eel.sleep(1)
     eel.spawn(check_alive, seconds)
     wait()
 
