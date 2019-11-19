@@ -90,7 +90,7 @@ def true_close():
 
 
 def wait():
-    eel.sleep(1e233)
+    eel.sleep(3.14e7)
 
 
 def init(seconds):
