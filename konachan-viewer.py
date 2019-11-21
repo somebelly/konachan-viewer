@@ -8,9 +8,9 @@ from requests_html import HTMLSession
 
 web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
 img_dir = os.path.join(web_dir, 'images')
-current_img = None
-current_url = None
+current = []
 last_call = None
+save_size = 5
 session = HTMLSession()
 beginning = {
     "konachan.com": date(2008, 1, 13),
@@ -18,9 +18,15 @@ beginning = {
 }
 
 
-def check_alive(seconds, r=0.5):
+@eel.expose
+def update_last_call():
+    global last_call
+    last_call = datetime.now()
+
+
+def check_alive(seconds):
     while (datetime.now() - last_call).seconds < seconds:
-        eel.sleep(seconds * (r + 1e-2))
+        eel.sleep(seconds / 5)
     true_close()
 
 
@@ -53,29 +59,27 @@ def get_image(url):
 
 
 def update():
-    global current_img, current_url
     while True:
         url = get_random_image_url()
         if url:
-            current_url = url
             image_name = get_image(url)
             if image_name:
-                current_img = image_name
+                current.append((image_name, url))
+                if len(current) > save_size:
+                    os.remove(os.path.join(img_dir, current.pop(0)[0]))
                 return
-
-
-def load():
-    global last_call
-    loaded = eel.loading([current_img, current_url])()
-    if loaded:
-        last_call = datetime.now()
-    print(loaded)
-    eel.spawn(update)
 
 
 def keep_loading(seconds):
     while True:
-        load()
+        eel.loading([1, current[-1][0], current[-1][1]])()
+        eel.spawn(update)
+        eel.sleep(seconds)
+
+
+def keep_calling(seconds):
+    while True:
+        eel.loading([0])()
         eel.sleep(seconds)
 
 
@@ -84,7 +88,8 @@ def fake_close(page, sockets):
 
 
 def true_close():
-    shutil.rmtree(img_dir)
+    for img in current:
+        os.remove(os.path.join(img_dir, img[0]))
     print('I\'m dead.')
     sys.exit()
 
@@ -94,7 +99,6 @@ def wait():
 
 
 def init(seconds):
-    global last_call
     if not os.path.exists(img_dir):
         os.mkdir(img_dir)
     update()
@@ -106,10 +110,11 @@ def init(seconds):
         block=False,
         close_callback=fake_close,
     )
+    eel.spawn(keep_calling, seconds / 5)
     eel.spawn(keep_loading, seconds)
     while not last_call:
         eel.sleep(1)
-    eel.spawn(check_alive, seconds)
+    eel.spawn(check_alive, 2 * seconds)
     wait()
 
 
