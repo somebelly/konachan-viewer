@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import os, sys, shutil, eel
-from hashlib import md5
+from base64 import b64encode
 from datetime import date, datetime, timedelta
 from random import randint, choice
 from requests_html import HTMLSession
 
 web_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'web')
-img_dir = os.path.join(web_dir, 'images')
 current = []
 last_call = None
-save_size = 5
+cache_size = 3
 session = HTMLSession()
 beginning = {
     "konachan.com": date(2008, 1, 13),
@@ -50,23 +49,20 @@ def get_random_image_url(site=None):
 
 def get_image(url):
     try:
-        img = session.get(url).content
-        image_name = md5(url.encode()).hexdigest() + os.path.splitext(url)[1]
-        open(os.path.join(img_dir, image_name), 'wb').write(img)
-        return image_name
+        return b64encode(session.get(url).content)
     except:
-        return ''
+        return b''
 
 
 def update():
     while True:
         url = get_random_image_url()
         if url:
-            image_name = get_image(url)
-            if image_name:
-                current.append((image_name, url))
-                if len(current) > save_size:
-                    os.remove(os.path.join(img_dir, current.pop(0)[0]))
+            img = get_image(url)
+            if img:
+                current.append((str(img)[2:-1], url))
+                if len(current) >= cache_size:
+                    current.pop(0)
                 return
 
 
@@ -88,8 +84,6 @@ def fake_close(page, sockets):
 
 
 def true_close():
-    for img in current:
-        os.remove(os.path.join(img_dir, img[0]))
     print('I\'m dead.')
     sys.exit()
 
@@ -99,8 +93,6 @@ def wait():
 
 
 def init(seconds):
-    if not os.path.exists(img_dir):
-        os.mkdir(img_dir)
     update()
     eel.init(web_dir)
     eel.start(
