@@ -5,9 +5,11 @@ Show a popular image from konachan or yande randomly (using eel)
 
  - [eel](https://github.com/samuelhwilliams/Eel)
  - [requests-html](https://github.com/psf/requests-html)
+ - [screeninfo](https://github.com/rr-/screeninfo)
+ - [Pillow](https://github.com/python-pillow/Pillow)
 
 ```
-pip install eel requests-html
+pip install eel requests-html screeninfo Pillow
 ```
 
 ## Usage

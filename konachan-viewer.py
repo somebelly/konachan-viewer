@@ -56,18 +56,11 @@ def random_date(start=date.today() - timedelta(days=1000), end=date.today()):
     return start + timedelta(days=randint(randint(0, size), size))
 
 
-# text="size_x x size_y"
-def get_size(text):
-    size = text.split('x')
-    return (int(size[0]), int(size[-1]))
-
-
 def image_filter(img_html_list, keywords=None):
-    img_list = [(img.links.pop(), get_size(img.text)) for img in img_html_list]
+    img_list = [img.links.pop() for img in img_html_list]
     if keywords:
         for keyword in keywords:
-            img_list = [(link, size) for link, size in img_list
-                        if keyword in link]
+            img_list = [link for link in img_list if keyword in link]
     return img_list
 
 
@@ -82,7 +75,7 @@ def get_random_image_url(site=None, keywords=None):
         return choice(image_filter(html_list, keywords))
     except Exception as e:
         print(e)
-        return ()
+        return ''
 
 
 def size_in_range(size, r=0.45):
@@ -90,16 +83,29 @@ def size_in_range(size, r=0.45):
             (1 + r))
 
 
-def get_image(url, size):
+def rotate(img):
+    ratio = img.size[0] / img.size[1]
+    need_rotate = (screen_ratio >= 1) ^ (ratio >= 1)
+    if need_rotate:
+        img = img.rotate(choice([90, -90]), expand=True)
+    return img
+
+
+def get_image(url):
     try:
+        print('\nURL: ', url)
         image = Image.open(BytesIO(session.get(url).content))
-        if size_in_range(size):
+        print('SIZE IN: ', image.size, end='\t')
+        image = rotate(image)
+        if size_in_range(image.size):
             image = ImageOps.fit(image, screen_size, method=Image.LANCZOS)
-        elif size_in_range(size[::-1]):
-            image = image.rotate(choice([90, -90]))
-            image = ImageOps.fit(image, screen_size, method=Image.LANCZOS)
+        print('SIZE OUT: ', image.size)
         buffered = BytesIO()
-        image.save(buffered, format='webp')
+        try:
+            image.save(buffered, format='webp')
+        except Exception as e:
+            print(e)
+            image.save(buffered, format='jpeg')
         return b64encode(buffered.getvalue())
     except Exception as e:
         print(e)
@@ -111,9 +117,9 @@ def update():
     while (datetime.now() - start).seconds < 10:
         url = get_random_image_url(keywords=img_keywords)
         if url:
-            img = get_image(url[0], url[1])
+            img = get_image(url)
             if img:
-                current.append((str(img)[2:-1], url[0]))
+                current.append((str(img)[2:-1], url))
                 if len(current) >= cache_size:
                     current.pop(0)
                 return
