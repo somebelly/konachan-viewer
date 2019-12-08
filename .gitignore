@@ -106,3 +106,4 @@ venv.bak/
 # others
 .directory
 setup.py
+node_modules
