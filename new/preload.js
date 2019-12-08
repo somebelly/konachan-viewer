@@ -5,22 +5,14 @@
 const { ipcRenderer } = require('electron')
 const request = require('request-promise')
 const cheerio = require('cheerio')
-const Jimp = require('jimp')
-const cachedImg = { url: null, img: null, ratio: null, time: null }
+const sharp = require('sharp')
+
+const cachedImg = []
+const cacheSize = 3
 const screenRatio = screen.width / screen.height
+const step = 3 * 1000
+let lastLoad
 const wait = time => new Promise((resolve) => setTimeout(resolve, time))
-
-window.addEventListener('DOMContentLoaded', () => {
-  const replaceText = (selector, text) => {
-    const element = document.getElementById(selector)
-    if (element) element.innerText = text
-  }
-
-  for (const type of ['chrome', 'node', 'electron']) {
-    replaceText(`${type}-version`, process.versions[type])
-  }
-})
-
 const sites = {
   konachan: {
     url: 'konachan.com',
@@ -31,6 +23,13 @@ const sites = {
     url: 'yande.re',
     startDate: date(2007, 8, 8)
   }
+}
+
+logger('info', 'Preloading...')
+logger('info', `cacheSize=${cacheSize}, screen=${screen.width}x${screen.height}, step=${step}.`)
+
+function logger (level, ...sth) {
+  ipcRenderer.send('log', level, ...sth)
 }
 
 function date (year, month, day) {
@@ -52,10 +51,12 @@ function randomDate (start = new Date() - 1000, end = new Date()) {
 function choice (array) { return array[Math.floor(Math.random() * array.length)] }
 
 async function getImg () {
+  while (cachedImg.length > cacheSize) await wait(200)
   const site = sites[choice(Object.keys(sites))]
   const d = dateOnly(randomDate(randomDate(site.startDate)))
+  const url = `https://${site.url}/post/popular_by_day?day=${d.day}&month=${d.month}&year=${d.year}`
   const options = {
-    uri: `https://${site.url}/post/popular_by_day?day=${d.day}&month=${d.month}&year=${d.year}`,
+    uri: url,
     headers: {
       accept: '*/*',
       'accept-encoding': 'gzip',
@@ -68,37 +69,40 @@ async function getImg () {
     }
   }
   const links = []
+  logger('debug', 'Getting links...')
 
   await request(options).then($ => {
     $('.directlink.largeimg').each((i, link) => { links.push($(link).attr('href')) })
     $('.directlink.smallimg').each((i, link) => { links.push($(link).attr('href')) })
+  }).catch((err) => {
+    logger('warning', err)
   })
 
   await getB64Img(choice(links))
+
+  // if (cachedImg.length > cacheSize) cachedImg.shift()
+  getImg()
 }
 
-function getRatio (image) {
-  return image.bitmap.width / image.bitmap.height
-}
-
-function sizeInRange (image, r = 0.45) {
-  const ratio = getRatio(image)
+function sizeInRange (ratio, r = 0.45) {
   return (screenRatio * (1 - r) < ratio < screenRatio * (1 + r))
 }
 
-function needRotate (image) {
-  const ratio = getRatio(image)
+function needRotate (ratio) {
   return ((screenRatio >= 1) !== (ratio >= 1))
 }
 
-function cache (url, img, ratio) {
-  cachedImg.url = url
-  cachedImg.img = img
-  cachedImg.ratio = ratio
-  // console.log('Cached.')
+function cache (url, img, info) {
+  cachedImg.push({
+    url: url,
+    img: img,
+    info: info
+  })
+  logger('debug', `Cached. Current length=${cachedImg.length}.`)
+  logger('trace', cachedImg)
 }
 
-async function getB64Img (link, crop = true) {
+async function getB64Img (link) {
   const options = {
     uri: link,
     headers: {
@@ -110,41 +114,61 @@ async function getB64Img (link, crop = true) {
     gzip: true,
     encoding: null
   }
+  logger('debug', 'Getting image...')
 
+  let ratio, mode, info
   const buffer = await request(options).then(body => Buffer.from(body))
-  const image = await Jimp.read(buffer).then(image => image.autocrop())
-  let img
-  if (crop) {
-    if (needRotate(image)) { image.rotate(choice([90, -90])) }
-    if (sizeInRange(image)) { image.cover(screen.width, screen.height) }
-    img = await image.getBase64Async(Jimp.AUTO)
-  } else {
-    img = 'data:image;base64,' + buffer.toString('base64')
-  }
-  await cache(link, img, getRatio(image))
+  const image = sharp(buffer)
+  const b64Img = await image
+    .metadata()
+    .then(metadata => {
+      info = { ...metadata }
+      ratio = metadata.width / metadata.height
+      if (needRotate(ratio)) {
+        ratio = 1 / ratio
+        return image.rotate(choice([90, -90]))
+      }
+      return image
+    })
+    .then(img => {
+      if (sizeInRange(ratio)) {
+        mode = sharp.fit.cover
+      } else {
+        mode = sharp.fit.contain
+      }
+
+      return img.resize({
+        width: screen.width,
+        height: screen.height,
+        fit: mode
+      }).webp()
+        .toBuffer()
+    })
+    .then(data => 'data:image;base64,' + data.toString('base64'))
+
+  await cache(link, b64Img, info)
 }
 
-// function isFullScreen () {
-//   return (!window.screenTop && !window.screenY) && (window.innerWidth === screen.width && window.innerHeight === screen.height)
-// }
-
 async function load () {
-  // ipcRenderer.send('global', 'fullscreen', isFullScreen())
-  document.getElementById('image').src = cachedImg.img
-  cachedImg.time = new Date()
-  console.log('URL: ', cachedImg.url)
-  // console.log('RATIO: ', cachedImg.ratio)
-  await getImg()
-  while (new Date() - cachedImg.time < 5000) { await wait(200) }
+  const cached = cachedImg.pop()
+  logger('trace', 'Loading: ', cached)
+
+  while (new Date() - lastLoad < step) { await wait(200) }
+  document.getElementById('image').src = cached.img
+  lastLoad = new Date()
+  logger('info', 'URL: ', cached.url)
+  logger('info', 'METADATA: ', cached.info)
   load()
 }
 
 async function init () {
-  await getImg()
+  logger('info', 'Started.')
+  for (let i = 0; i < cacheSize; i++) getImg()
+  while (cachedImg.length < 2) await wait(200)
+  load()
   ipcRenderer.send('resize', screen.width * 0.75, screen.height * 0.75)
   ipcRenderer.send('fullscreen')
   ipcRenderer.send('show')
-  load()
 }
 
 init()
