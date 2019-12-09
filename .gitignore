@@ -108,3 +108,4 @@ venv.bak/
 setup.py
 node_modules
 *lock*
+test.js
