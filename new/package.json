@@ -4,7 +4,7 @@
     "description": "Show a popular image from konachan or yande randomly.",
     "main": "main.js",
     "scripts": {
-        "rebuid": "electron-rebuild",
+        "rebuild": "electron-rebuild",
         "start": "electron ."
     },
     "repository": {
