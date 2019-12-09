@@ -30,7 +30,6 @@ cd konachan-viewer
     ```
     (Optional) Add to path (change `knv` to whatever you like):
     ```
-
     chmod +x konachan-viewer.py
     ln -s konachan-viewer.py <Somewhere in PATH/knv>
     ```
