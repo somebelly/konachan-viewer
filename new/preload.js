@@ -85,7 +85,7 @@ async function getImg () {
 }
 
 function sizeInRange (ratio, r = 0.45) {
-  return (screenRatio * (1 - r) < ratio < screenRatio * (1 + r))
+  return (screenRatio * (1 - r) < ratio && ratio < screenRatio * (1 + r))
 }
 
 function needRotate (ratio) {
@@ -156,8 +156,8 @@ async function load () {
   while (new Date() - lastLoad < step) { await wait(200) }
   document.getElementById('image').src = cached.img
   lastLoad = new Date()
-  logger('info', 'URL: ', cached.url)
-  logger('info', 'METADATA: ', cached.info)
+  logger('debug', 'URL: ', cached.url)
+  logger('debug', 'METADATA: ', cached.info)
   load()
 }
 

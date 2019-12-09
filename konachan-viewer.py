@@ -1,1 +1,0 @@
-/home/aforest/apps/konachan-viewer/old/konachan-viewer.py

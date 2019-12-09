@@ -13,8 +13,9 @@ logger.log = (level, ...sth) => {
     for (const k in time) {
       if (time[k] < 10) {
         time[k] = `0${time[k]}`
+      } else {
+        time[k] = `${time[k]}`
       }
-      time[k] = `${time[k]}`
     }
 
     const t = `${time.hh}:${time.mm}:${time.ss}`
@@ -42,6 +43,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     show: false,
     frame: false,
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
@@ -59,7 +61,7 @@ function createWindow () {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null
-    logger.log('info', 'Closing mainWindow...')
+    logger.log('info', 'MainWindow closed.')
   })
 }
 
@@ -98,7 +100,7 @@ ipcMain.on('show', (event, args) => {
 
 ipcMain.on('fullscreen', (event, args) => {
   mainWindow.setFullScreen(true)
-  logger.log('info', 'Entered fullscreen mode.')
+  logger.log('info', 'Set to fullscreen mode. Press [F11] to toggle.')
 })
 
 ipcMain.on('log', (event, level, ...sth) => {

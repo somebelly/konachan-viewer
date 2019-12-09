@@ -107,3 +107,4 @@ venv.bak/
 .directory
 setup.py
 node_modules
+*lock*
