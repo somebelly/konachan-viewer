@@ -77,7 +77,10 @@ async function getImg () {
       $('.directlink.smallimg').each((i, link) => { links.push($(link).attr('href')) })
     })
     .then(() => getB64Img(choice(links)))
-    .catch((err) => { logger('info', `${err.message}. Retry.`) })
+    .catch((err) => {
+      logger('info', err.message)
+      logger('info', url)
+    })
 
   await wait(step / cacheSize + 1000)
   getImg()
@@ -146,7 +149,8 @@ async function getB64Img (link) {
       cache(link, 'data:image;base64,' + data.toString('base64'), info)
     })
     .catch((err) => {
-      logger('info', `${err.message}.`)
+      logger('info', err.message)
+      logger('info', link)
     })
 }
 
