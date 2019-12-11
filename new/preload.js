@@ -71,17 +71,15 @@ async function getImg () {
   const links = []
   logger('debug', 'Getting links...')
 
-  await request(options).then($ => {
-    $('.directlink.largeimg').each((i, link) => { links.push($(link).attr('href')) })
-    $('.directlink.smallimg').each((i, link) => { links.push($(link).attr('href')) })
-  }).catch((err) => {
-    logger('info', err.message, ' Retry.')
-    getImg()
-  })
+  request(options)
+    .then($ => {
+      $('.directlink.largeimg').each((i, link) => { links.push($(link).attr('href')) })
+      $('.directlink.smallimg').each((i, link) => { links.push($(link).attr('href')) })
+    })
+    .then(() => getB64Img(choice(links)))
+    .catch((err) => { logger('info', `${err.message}. Retry.`) })
 
-  await getB64Img(choice(links))
-
-  // if (cachedImg.length > cacheSize) cachedImg.shift()
+  await wait(step / cacheSize + 1000)
   getImg()
 }
 
@@ -120,8 +118,7 @@ async function getB64Img (link) {
   let ratio, mode, info
   const buffer = await request(options).then(body => Buffer.from(body))
   const image = sharp(buffer)
-  const b64Img = await image
-    .metadata()
+  image.metadata()
     .then(metadata => {
       info = { ...metadata }
       ratio = metadata.width / metadata.height
@@ -145,16 +142,16 @@ async function getB64Img (link) {
       }).webp()
         .toBuffer()
     })
-    .then(data => 'data:image;base64,' + data.toString('base64'))
-    .catch((err) => {
-      logger('info', err.message, ' Retry.')
-      getImg()
+    .then(data => {
+      cache(link, 'data:image;base64,' + data.toString('base64'), info)
     })
-
-  await cache(link, b64Img, info)
+    .catch((err) => {
+      logger('info', `${err.message}.`)
+    })
 }
 
 async function load () {
+  while (cachedImg.length === 1) await wait(200)
   const cached = cachedImg.pop()
   logger('trace', 'Loading: ', cached)
 
