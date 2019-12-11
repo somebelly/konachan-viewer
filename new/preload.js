@@ -11,7 +11,7 @@ const cachedImg = []
 const cacheSize = 3
 const screenRatio = screen.width / screen.height
 const step = 3 * 1000
-let lastLoad
+var lastLoad = new Date() - step
 const wait = time => new Promise((resolve) => setTimeout(resolve, time))
 const sites = {
   konachan: {
@@ -151,8 +151,9 @@ async function getB64Img (link) {
 }
 
 async function load () {
-  while (cachedImg.length === 1) await wait(200)
-  const cached = cachedImg.pop()
+  if (cachedImg.length < 1) logger('info', 'Loading...')
+  while (cachedImg.length < 1) await wait(200)
+  const cached = cachedImg.shift()
   logger('trace', 'Loading: ', cached)
 
   while (new Date() - lastLoad < step) { await wait(200) }
@@ -166,8 +167,8 @@ async function load () {
 async function init () {
   logger('info', 'Started.')
   for (let i = 0; i < cacheSize; i++) getImg()
-  while (cachedImg.length < 2) await wait(200)
   load()
+  while (cachedImg.length < 1) await wait(200)
   ipcRenderer.send('resize', screen.width * 0.75, screen.height * 0.75)
   ipcRenderer.send('fullscreen')
   ipcRenderer.send('show')
