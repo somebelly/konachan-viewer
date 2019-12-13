@@ -33,16 +33,17 @@ logger('info', 'Preloading...')
 logger('info', `cacheSize=${cacheSize}, screen=${screen.width}x${screen.height}, step=${step}.`)
 
 document.addEventListener('keydown', function (event) {
+  const input = document.getElementById('keywords')
   if (!keywords.state && event.ctrlKey && event.key === 'f') {
     logger('info', 'Entering keywords...')
-    document.getElementById('keywords').style.display = 'block'
+    input.style.display = 'block'
+    input.focus()
     keywords.state = true
   }
   if (keywords.state && event.key === 'Enter') {
-    var input = document.getElementById('keywords').value
-    keywords.list = input.replace(',', ' ').replace(';', ' ').split()
+    keywords.list = input.value.replace(',', ' ').replace(';', ' ').split()
     logger('info', `keywords = ${keywords.list}`)
-    document.getElementById('keywords').style.display = 'none'
+    input.style.display = 'none'
     keywords.state = false
   }
 })
