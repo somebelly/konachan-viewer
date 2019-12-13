@@ -24,9 +24,28 @@ const sites = {
     startDate: date(2007, 8, 8)
   }
 }
+const keywords = {
+  list: [],
+  state: false
+}
 
 logger('info', 'Preloading...')
 logger('info', `cacheSize=${cacheSize}, screen=${screen.width}x${screen.height}, step=${step}.`)
+
+document.addEventListener('keydown', function (event) {
+  if (!keywords.state && event.ctrlKey && event.key === 'f') {
+    logger('info', 'Entering keywords...')
+    document.getElementById('keywords').style.display = 'block'
+    keywords.state = true
+  }
+  if (keywords.state && event.key === 'Enter') {
+    var input = document.getElementById('keywords').value
+    keywords.list = input.replace(',', ' ').replace(';', ' ').split()
+    logger('info', `keywords = ${keywords.list}`)
+    document.getElementById('keywords').style.display = 'none'
+    keywords.state = false
+  }
+})
 
 function logger (level, ...sth) {
   ipcRenderer.send('log', level, ...sth)
@@ -49,6 +68,16 @@ function randomDate (start = new Date() - 1000, end = new Date()) {
 }
 
 function choice (array) { return array[Math.floor(Math.random() * array.length)] }
+
+function filter (links) {
+  let res = links
+  let temp
+  for (let i = 0; i < keywords.list.length; i++) {
+    temp = res.filter(link => link.includes(keywords.list[i]))
+    if (temp.length > 0) { res = temp } else { break }
+  }
+  return res
+}
 
 async function getImg () {
   while (cachedImg.length > cacheSize) await wait(200)
@@ -76,10 +105,10 @@ async function getImg () {
       $('.directlink.largeimg').each((i, link) => { links.push($(link).attr('href')) })
       $('.directlink.smallimg').each((i, link) => { links.push($(link).attr('href')) })
     })
-    .then(() => getB64Img(choice(links)))
+    .then(() => getB64Img(choice(filter(links))))
     .catch((err) => {
-      logger('info', err.message)
-      logger('info', url)
+      logger('debug', err.message)
+      logger('debug', url)
     })
 
   await wait(step / cacheSize + 1000)
@@ -149,8 +178,8 @@ async function getB64Img (link) {
       cache(link, 'data:image;base64,' + data.toString('base64'), info)
     })
     .catch((err) => {
-      logger('info', err.message)
-      logger('info', link)
+      logger('debug', err.message)
+      logger('debug', link)
     })
 }
 
@@ -162,6 +191,7 @@ async function load () {
 
   while (new Date() - lastLoad < step) { await wait(200) }
   document.getElementById('image').src = cached.img
+  // document.getElementById('image').style.background = `url(${cached.img})`
   lastLoad = new Date()
   logger('debug', 'URL: ', cached.url)
   logger('debug', 'METADATA: ', cached.info)
