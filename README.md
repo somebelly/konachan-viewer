@@ -41,4 +41,5 @@ cd konachan-viewer
 
 ## Tips
  - Press `F11` to toggle full-screen mode
+ - Press `ctrl+F` to give some keywords (only in `new`)
  - <del>Press `F12` to view history logs </del> (only in `old`)
