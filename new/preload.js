@@ -9,6 +9,7 @@ const sharp = require('sharp')
 
 const cachedImg = []
 const cacheSize = 3
+const scaling = 2
 const screenRatio = screen.width / screen.height
 const step = 3 * 1000
 var lastLoad = new Date() - step
@@ -31,6 +32,7 @@ const keywords = {
 
 logger('info', 'Preloading...')
 logger('info', `cacheSize=${cacheSize}, screen=${screen.width}x${screen.height}, step=${step}.`)
+logger('info', `scaling=${scaling * screen.width}x${scaling * screen.height}.`)
 
 document.addEventListener('keydown', function (event) {
   const input = document.getElementById('keywords')
@@ -48,15 +50,15 @@ document.addEventListener('keydown', function (event) {
   }
 })
 
-function logger (level, ...sth) {
+function logger(level, ...sth) {
   ipcRenderer.send('log', level, ...sth)
 }
 
-function date (year, month, day) {
+function date(year, month, day) {
   return new Date(year, month - 1, day)
 }
 
-function dateOnly (d) {
+function dateOnly(d) {
   return {
     year: d.getFullYear(),
     month: d.getMonth() + 1,
@@ -64,13 +66,13 @@ function dateOnly (d) {
   }
 }
 
-function randomDate (start = new Date() - 1000, end = new Date()) {
+function randomDate(start = new Date() - 1000, end = new Date()) {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
 }
 
-function choice (array) { return array[Math.floor(Math.random() * array.length)] }
+function choice(array) { return array[Math.floor(Math.random() * array.length)] }
 
-function filter (links) {
+function filter(links) {
   let res = links
   let temp
   for (let i = 0; i < keywords.list.length; i++) {
@@ -80,7 +82,7 @@ function filter (links) {
   return res
 }
 
-async function getImg () {
+async function getImg() {
   while (cachedImg.length > cacheSize) await wait(200)
   const site = sites[choice(Object.keys(sites))]
   const d = dateOnly(randomDate(randomDate(site.startDate)))
@@ -116,15 +118,15 @@ async function getImg () {
   getImg()
 }
 
-function sizeInRange (ratio, r = 0.45) {
+function sizeInRange(ratio, r = 0.45) {
   return (screenRatio * (1 - r) < ratio && ratio < screenRatio * (1 + r))
 }
 
-function needRotate (ratio) {
+function needRotate(ratio) {
   return ((screenRatio >= 1) !== (ratio >= 1))
 }
 
-function cache (url, img, info) {
+function cache(url, img, info) {
   cachedImg.push({
     url: url,
     img: img,
@@ -134,7 +136,7 @@ function cache (url, img, info) {
   logger('trace', cachedImg)
 }
 
-async function getB64Img (link) {
+async function getB64Img(link) {
   const options = {
     uri: link,
     headers: {
@@ -169,8 +171,8 @@ async function getB64Img (link) {
       }
 
       return img.resize({
-        width: screen.width,
-        height: screen.height,
+        width: scaling * screen.width,
+        height: scaling * screen.height,
         fit: mode
       }).webp()
         .toBuffer()
@@ -184,7 +186,7 @@ async function getB64Img (link) {
     })
 }
 
-async function load () {
+async function load() {
   if (cachedImg.length < 1) logger('info', 'Loading...')
   while (cachedImg.length < 1) await wait(200)
   const cached = cachedImg.shift()
@@ -199,7 +201,7 @@ async function load () {
   load()
 }
 
-async function init () {
+async function init() {
   logger('info', 'Started.')
   for (let i = 0; i < cacheSize; i++) getImg()
   load()
