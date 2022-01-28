@@ -1,11 +1,13 @@
 .frame {
-    -webkit-app-region: drag;
+    /* -webkit-app-region: drag; */
+    cursor: none;
     text-align: center;
     height: 100vh;
     margin: 0;
 }
 
 #image {
+    cursor: none;
     vertical-align: middle;
     position: absolute;
     z-index: -1;

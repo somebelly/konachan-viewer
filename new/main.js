@@ -35,13 +35,14 @@ const loglevels = {
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
-function createWindow () {
+function createWindow() {
   logger.log('info', 'Creating mainWindow...')
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
     show: false,
-    frame: false,
+    // frame: false,
+    autoHideMenuBar: true,
     icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
